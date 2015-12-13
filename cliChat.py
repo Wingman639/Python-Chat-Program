@@ -801,8 +801,11 @@ def wait_for_input():
         text = raw_input(':')
         if text == '>':
             wait_for_command()
-        if text == 'exit':
+        elif text == 'exit':
+            release_all()
             return
+        else:
+            placeText(text)
 
 
 def wait_for_command():
@@ -815,6 +818,9 @@ def wait_for_command():
             if exit:
                 return
 
+
+def release_all():
+    pass
 
 def run_command(cmd):
     if cmd == '?':
