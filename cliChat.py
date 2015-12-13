@@ -28,10 +28,10 @@ MY_USER_NAME = "Server"
 LINE_CHAR_LENGTH = 80
 SPACE = '                                                            '
 CONTACTS_FILE_NAME = "contacts.txt"
-
+DEFAULT_PORT = 9999
 LOCAL_DATA_FILE_NAME = 'local.dat'
 g_local = {'my_nick': 'Server',
-           'port': 9999}
+           'port': DEFAULT_PORT}
 
 location = 0
 port = 0
@@ -106,6 +106,7 @@ def netThrow(conn, secret, message):
                 "Connection issue. Sending message failed.", "System")
             processFlag("-001")
 
+
 def netCatch(conn, secret):
     """Receive and return the message through open socket conn, decrypting
     using key secret. If the message length begins with - instead of a number,
@@ -114,6 +115,7 @@ def netCatch(conn, secret):
     """
     try:
         data = conn.recv(4)
+        print(data)
         if data.decode()[0] == '-':
             processFlag(data.decode(), conn)
             return 1
@@ -141,7 +143,6 @@ def processFlag(number, conn=None):
     if necessary.
 
     """
-    global statusConnect
     global conn_array
     global secret_array
     global username_array
@@ -159,9 +160,6 @@ def processFlag(number, conn=None):
                 dump.close()
             except socket.error:
                 print("Issue with someone being bad about disconnecting")
-            if not isCLI:
-                statusConnect.set("Connect")
-                connecter.config(state=NORMAL)
             return
 
         if conn != None:
@@ -381,9 +379,6 @@ def error_window(master, texty):
         go.pack()
         go.focus_set()
 
-def optionDelete(window):
-    connecter.config(state=NORMAL)
-    window.destroy()
 
 #-----------------------------------------------------------------------------
 # Contacts window
@@ -519,7 +514,7 @@ def placeText(text):
 def writeToScreen(text, username=""):
     """Places text to main text body in format "username: text"."""
     if username:
-        print(username + ": " + text)
+        print('%s: %s' %(username, text))
     else:
         print(text)
 
@@ -574,6 +569,7 @@ class Server (threading.Thread):
         self.port = port
 
     def run(self):
+        print('Server run function')
         global conn_array
         global MY_USER_NAME
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -600,10 +596,6 @@ class Server (threading.Thread):
         conn, addr = serv.accept()
         conn_array.append(conn)  # add an array entry for this connection
         writeToScreen("Connected by " + str(addr[0]), "System")
-
-        global statusConnect
-        statusConnect.set("Disconnect")
-        connecter.config(state=NORMAL)
 
         # create the numbers for my encryption
         prime = random.randint(1000, 9000)
@@ -666,12 +658,10 @@ class Client (threading.Thread):
             conn_init.connect((self.host, self.port))
         except socket.timeout:
             writeToScreen("Timeout issue. Host possible not there.", "System")
-            connecter.config(state=NORMAL)
             raise SystemExit(0)
         except socket.error:
             writeToScreen(
                 "Connection issue. Host actively refused connection.", "System")
-            connecter.config(state=NORMAL)
             raise SystemExit(0)
         porta = conn_init.recv(5)
         porte = int(porta.decode())
@@ -681,10 +671,6 @@ class Client (threading.Thread):
 
         writeToScreen("Connected to: " + self.host +
                       " on port: " + str(porte), "System")
-
-        global statusConnect
-        statusConnect.set("Disconnect")
-        connecter.config(state=NORMAL)
 
         conn_array.append(conn)
         # get my base, prime, and A values
@@ -726,7 +712,7 @@ def Runner(conn, secret):
     global username_array
     while 1:
         data = netCatch(conn, secret)
-        if data != 1:
+        if data and data != 1:
             writeToScreen(data, username_array[conn])
 
 # -------------------------------------------------------------------------
@@ -742,13 +728,13 @@ def QuickClient():
     destination = Entry(window)
     destination.grid(row=0, column=1)
     go = Button(window, text="Connect", command=lambda:
-                client_options_go(destination.get(), "9999", window))
+                client_options_go(destination.get(), "DEFAULT_PORT", window))
     go.grid(row=1, column=1)
 
 
 def QuickServer():
     """Quickstarts a server."""
-    Server(9999).start()
+    Server(DEFAULT_PORT).start()
 
 
 def saveHistory():
@@ -770,14 +756,12 @@ def saveHistory():
 
 def connects(clientType):
     global conn_array
-    connecter.config(state=DISABLED)
     if len(conn_array) == 0:
         if clientType == 0:
             client_options_window(root)
         if clientType == 1:
             server_options_window(root)
     else:
-        # connecter.config(state=NORMAL)
         for connection in conn_array:
             connection.send("-001".encode())
         processFlag("-001")
@@ -792,8 +776,25 @@ def toTwo():
     global clientType
     clientType = 1
 
+# -------------------------------------------------------------------------
+
+
+def save_local_data():
+    with open(LOCAL_DATA_FILE_NAME, 'w') as f:
+        f.write(unicode(g_local))
+
+
+def load_local_data():
+    global g_local
+    try:
+        with open(LOCAL_DATA_FILE_NAME, 'r') as f:
+            text = f.read()
+            g_local = eval(text)
+    except:
+        pass
 
 # -------------------------------------------------------------------------
+
 
 def wait_for_input():
     while True:
@@ -810,7 +811,9 @@ def wait_for_command():
         if cmd == 'exit':
             return
         if cmd:
-            run_command(cmd)
+            exit = run_command(cmd)
+            if exit:
+                return
 
 
 def run_command(cmd):
@@ -819,11 +822,47 @@ def run_command(cmd):
     elif cmd == 'port':
         show_my_port()
     elif cmd == 'set port':
-        set_server_listen_port()
+        try_set_my_port()
+    elif cmd == 'start server':
+        start_server()
+        return True
+    else:
+        print('unknown command: %s' % cmd)
+
+
+def start_server():
+    if not g_local['port']:
+        try_set_my_port()
+    if not g_local['port']:
+        print ('listen port = %d' % DEFAULT_PORT)
+        g_local['port'] = DEFAULT_PORT
+    Server(g_local['port']).start()
+    print('Start server on port: %d' % g_local['port'])
 
 
 def show_my_port():
-    print('port:' + str(g_local['port']))
+    print(g_local['port'])
+
+
+def try_set_my_port():
+    retry_times = 3
+    for i in range(retry_times):
+        if set_my_port():
+            return
+    print('port setting canceled')
+
+
+def set_my_port():
+    try:
+        port = input('listen port: ')
+        if isinstance(port, int):
+            g_local['port'] = port
+            save_local_data()
+            print('Set listen port = %d. Success.' % port)
+            return True
+    except:
+        pass
+    print('not valid port number')
 
 
 def show_command_help():
@@ -831,8 +870,10 @@ def show_command_help():
     print('set_nick: set new nickname')
     print('port: set server listen port number')
 
+
 def main():
     print("Starting command line chat")
+    load_local_data()
     wait_for_input()
 
 
