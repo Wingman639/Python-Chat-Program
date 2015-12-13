@@ -24,14 +24,16 @@ username_array = dict()
 # key: ip address as a string, value: [port, username]
 contact_array = dict()
 
-MY_USER_NAME = "Server"
+
 LINE_CHAR_LENGTH = 80
 SPACE = '                                                            '
 CONTACTS_FILE_NAME = "contacts.txt"
-DEFAULT_PORT = 9999
+DEFAULT_PORT = 5555
 LOCAL_DATA_FILE_NAME = 'local.dat'
-g_local = {'my_nick': 'Server',
-           'port': DEFAULT_PORT}
+g_local = {'name': 'Server',
+           'port': DEFAULT_PORT,
+           'server_ip': None,
+           'server_port': None}
 
 location = 0
 port = 0
@@ -190,7 +192,7 @@ def processUserCommands(command, param):
     """Processes commands passed in via the / text input."""
     global conn_array
     global secret_array
-    global MY_USER_NAME
+    global g_local
 
     if command == "nick":  # change nickname
         for letter in param[0]:
@@ -205,7 +207,7 @@ def processUserCommands(command, param):
             for conn in conn_array:
                 conn.send("-002".encode())
                 netThrow(conn, secret_array[conn], param[0])
-            MY_USER_NAME = param[0]
+            g_local['name'] = param[0]
         else:
             writeToScreen(param[0] +
                           " is already taken as a username", "System")
@@ -220,14 +222,17 @@ def processUserCommands(command, param):
         if(options_sanitation(param[0])):
             Server(int(param[0])).start()
 
+
 def isUsernameFree(name):
     """Checks to see if the username name is free for use."""
     global username_array
-    global MY_USER_NAME
-    for conn in username_array:
-        if name == username_array[conn] or name == MY_USER_NAME:
-            return False
+    global g_local
+    if name == g_local['name']:
+        return False
+    if name in username_array.values():
+        return False
     return True
+
 
 def passFriends(conn):
     """Sends conn all of the people currently in conn_array so they can connect
@@ -505,7 +510,6 @@ def placeText(text):
     """
     global conn_array
     global secret_array
-    global MY_USER_NAME
     myWordsToScreen(text)
     for person in conn_array:
         netThrow(person, secret_array[person], text)
@@ -520,12 +524,12 @@ def writeToScreen(text, username=""):
 
 
 def myWordsToScreen(text):
-    """Places my words to main text body in format " text :MY_USER_NAME"."""
-    global MY_USER_NAME
+    """Places my words to main text body in format " text :my_nick"."""
+    global g_local
     global LINE_CHAR_LENGTH
 
-    count = LINE_CHAR_LENGTH - len(text) - 2 - len(MY_USER_NAME)
-    new_text = SPACE[0:count] + text + " :" + MY_USER_NAME
+    count = LINE_CHAR_LENGTH - len(text) - 2 - len(g_local['name'])
+    new_text = SPACE[0:count] + text + " :" + g_local['name']
     print(new_text)
 
 
@@ -571,7 +575,7 @@ class Server (threading.Thread):
     def run(self):
         print('Server run function')
         global conn_array
-        global MY_USER_NAME
+        global g_local
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.bind(('', self.port))
 
@@ -625,8 +629,8 @@ class Server (threading.Thread):
         # store the encryption key by the connection
         secret_array[conn] = secret
 
-        conn.send(formatNumber(len(MY_USER_NAME)).encode())
-        conn.send(MY_USER_NAME.encode())
+        conn.send(formatNumber(len(g_local['name'])).encode())
+        conn.send(g_local['name'].encode())
 
         data = conn.recv(4)
         data = conn.recv(int(data.decode()))
@@ -690,8 +694,8 @@ class Client (threading.Thread):
         secret = pow(a, b) % prime
         secret_array[conn] = secret
 
-        conn.send(formatNumber(len(username)).encode())
-        conn.send(username.encode())
+        conn.send(formatNumber(len(g_local['name'])).encode())
+        conn.send(g_local['name'].encode())
 
         data = conn.recv(4)
         data = conn.recv(int(data.decode()))
@@ -822,18 +826,60 @@ def wait_for_command():
 def release_all():
     pass
 
+
 def run_command(cmd):
     if cmd == '?':
         show_command_help()
+    elif cmd == 'show':
+        show_local()
     elif cmd == 'port':
-        show_my_port()
-    elif cmd == 'set port':
         try_set_my_port()
-    elif cmd == 'start server':
+    elif cmd == 'server':
         start_server()
         return True
+    elif cmd == 'client':
+        start_client()
+        return True
+    elif cmd == 'server ip':
+        set_server_ip()
+    elif cmd == 'server port':
+        set_server_port()
     else:
         print('unknown command: %s' % cmd)
+
+
+def set_server_ip():
+    try:
+        ip = raw_input('server IP: ')
+        g_local['server_ip'] = ip
+        save_local_data()
+        print('Set server IP = %s. Success.' % ip)
+        return True
+    except:
+        pass
+    print('not valid IP address')
+
+
+def set_server_port():
+    try:
+        port = input('server port: ')
+        if isinstance(port, int):
+            g_local['server_port'] = port
+            save_local_data()
+            print('Set server port = %d. Success.' % port)
+            return True
+    except:
+        pass
+    print('not valid port number')
+
+
+def start_client():
+    if not g_local['server_ip']:
+        set_server_ip()
+    if not g_local['server_port']:
+        set_server_port()
+    if g_local['server_ip'] and g_local['server_port']:
+        Client(g_local['server_ip'], g_local['server_port']).start()
 
 
 def start_server():
@@ -846,8 +892,8 @@ def start_server():
     print('Start server on port: %d' % g_local['port'])
 
 
-def show_my_port():
-    print(g_local['port'])
+def show_local():
+    print(g_localcli)
 
 
 def try_set_my_port():
