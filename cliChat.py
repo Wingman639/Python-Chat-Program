@@ -830,6 +830,8 @@ def release_all():
 def run_command(cmd):
     if cmd == '?':
         show_command_help()
+    elif cmd == 'name':
+        set_name()
     elif cmd == 'show':
         show_local()
     elif cmd == 'port':
@@ -846,6 +848,18 @@ def run_command(cmd):
         set_server_port()
     else:
         print('unknown command: %s' % cmd)
+
+
+def set_name():
+    try:
+        text = raw_input('name: ')
+        g_local['name'] = text
+        save_local_data()
+        print('Set name = %s. Success.' % text)
+        return True
+    except:
+        pass
+    print('not valid IP address')
 
 
 def set_server_ip():
