@@ -13,9 +13,10 @@ else:
 if version == 2:
     from Tkinter import *
     from tkFileDialog import asksaveasfilename
-if version == 3:
+elif version == 3:
     from tkinter import *
     from tkinter.filedialog import asksaveasfilename
+
 import threading
 import socket
 import random
@@ -30,7 +31,11 @@ username_array = dict()  # key: the open sockets in conn_array,
                         # value: usernames for the connection
 contact_array = dict()  # key: ip address as a string, value: [port, username]
 
-username = "Self"
+MY_USER_NAME = "Server"
+LINE_CHAR_LENGTH = 80
+WHITE_SPACE_LINE = '                                                                                '
+CONTACTS_FILE_NAME = "contacts.txt"
+
 
 location = 0
 port = 0
@@ -138,7 +143,7 @@ def isPrime(number):
 def processFlag(number, conn=None):
     """Process the flag corresponding to number, using open socket conn
     if necessary.
-  
+
     """
     global statusConnect
     global conn_array
@@ -191,7 +196,7 @@ def processUserCommands(command, param):
     """Processes commands passed in via the / text input."""
     global conn_array
     global secret_array
-    global username
+    global MY_USER_NAME
 
     if command == "nick":  # change nickname
         for letter in param[0]:
@@ -206,7 +211,7 @@ def processUserCommands(command, param):
             for conn in conn_array:
                 conn.send("-002".encode())
                 netThrow(conn, secret_array[conn], param[0])
-            username = param[0]
+            MY_USER_NAME = param[0]
         else:
             writeToScreen(param[0] +
                           " is already taken as a username", "System")
@@ -224,16 +229,16 @@ def processUserCommands(command, param):
 def isUsernameFree(name):
     """Checks to see if the username name is free for use."""
     global username_array
-    global username
+    global MY_USER_NAME
     for conn in username_array:
-        if name == username_array[conn] or name == username:
+        if name == username_array[conn] or name == MY_USER_NAME:
             return False
     return True
 
 def passFriends(conn):
     """Sends conn all of the people currently in conn_array so they can connect
     to them.
-    
+
     """
     global conn_array
     for connection in conn_array:
@@ -467,10 +472,11 @@ def contacts_add_helper(username, ip, port, window, listbox):
         return
 
 def load_contacts():
-    """Loads the recent chats out of the persistent file contacts.dat."""
+    """Loads the recent chats out of the persistent file contacts.txt."""
     global contact_array
+    global CONTACTS_FILE_NAME
     try:
-        filehandle = open("data\\contacts.dat", "r")
+        filehandle = open(CONTACTS_FILE_NAME, "r")
     except IOError:
         return
     line = filehandle.readline()
@@ -481,10 +487,11 @@ def load_contacts():
     filehandle.close()
 
 def dump_contacts():
-    """Saves the recent chats to the persistent file contacts.dat."""
+    """Saves the recent chats to the persistent file contacts.txt."""
     global contact_array
+    global CONTACTS_FILE_NAME
     try:
-        filehandle = open("data\\contacts.dat", "w")
+        filehandle = open(CONTACTS_FILE_NAME, "w")
     except IOError:
         print("Can't dump contacts.")
         return
@@ -505,8 +512,9 @@ def placeText(text):
     """
     global conn_array
     global secret_array
-    global username
-    writeToScreen(text, username)
+    global MY_USER_NAME
+    #writeToScreen(text, MY_USER_NAME)
+    myWordsToScreen(text)
     for person in conn_array:
         netThrow(person, secret_array[person], text)
 
@@ -514,6 +522,7 @@ def writeToScreen(text, username=""):
     """Places text to main text body in format "username: text"."""
     global main_body_text
     global isCLI
+    global MY_USER_NAME
     if isCLI:
         if username:
             print(username + ": " + text)
@@ -527,6 +536,27 @@ def writeToScreen(text, username=""):
         main_body_text.insert(END, text)
         main_body_text.yview(END)
         main_body_text.config(state=DISABLED)
+
+
+def myWordsToScreen(text):
+    """Places my words to main text body in format " text :MY_USER_NAME"."""
+    global main_body_text
+    global isCLI
+    global MY_USER_NAME
+    global LINE_CHAR_LENGTH
+
+    if isCLI:
+        print(MY_USER_NAME + ": " + text)
+        return
+
+    count = LINE_CHAR_LENGTH - len(text) - 2 - len(MY_USER_NAME)
+    new_text = WHITE_SPACE_LINE[0:count] + text + " :" + MY_USER_NAME
+    main_body_text.config(state=NORMAL)
+    main_body_text.insert(END, '\n')
+    main_body_text.insert(END, new_text)
+    main_body_text.yview(END)
+    main_body_text.config(state=DISABLED)
+
 
 def processUserText(event):
     """Takes text from text bar input and calls processUserCommands if it
@@ -569,6 +599,7 @@ class Server (threading.Thread):
 
     def run(self):
         global conn_array
+        global MY_USER_NAME
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.bind(('', self.port))
 
@@ -626,8 +657,8 @@ class Server (threading.Thread):
         # store the encryption key by the connection
         secret_array[conn] = secret
 
-        conn.send(formatNumber(len(username)).encode())
-        conn.send(username.encode())
+        conn.send(formatNumber(len(MY_USER_NAME)).encode())
+        conn.send(MY_USER_NAME.encode())
 
         data = conn.recv(4)
         data = conn.recv(int(data.decode()))
