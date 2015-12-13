@@ -1,55 +1,49 @@
 import sys
-if not sys.hexversion > 0x03000000:
-    version = 2
-else:
-    version = 3
-if len(sys.argv) > 1 and sys.argv[1] == "-cli":
-    print("Starting command line chat")
-    isCLI = True
-else:
-    isCLI = False
-
-
-if version == 2:
-    from Tkinter import *
-    from tkFileDialog import asksaveasfilename
-elif version == 3:
-    from tkinter import *
-    from tkinter.filedialog import asksaveasfilename
-
 import threading
 import socket
 import random
 import math
 
+if not sys.hexversion > 0x03000000:
+    version = 2
+else:
+    version = 3
+
+isCLI = True
+
 
 # GLOBALS
 conn_array = []  # stores open sockets
-secret_array = dict()  # key: the open sockets in conn_array,
-                        # value: integers for encryption
-username_array = dict()  # key: the open sockets in conn_array,
-                        # value: usernames for the connection
-contact_array = dict()  # key: ip address as a string, value: [port, username]
+
+# key: the open sockets in conn_array,# value: integers for encryption
+secret_array = dict()
+
+# key: the open sockets in conn_array,# value: usernames for the connection
+username_array = dict()
+
+# key: ip address as a string, value: [port, username]
+contact_array = dict()
 
 MY_USER_NAME = "Server"
 LINE_CHAR_LENGTH = 80
-WHITE_SPACE_LINE = '                                                                                '
+SPACE = '                                                            '
 CONTACTS_FILE_NAME = "contacts.txt"
 
 LOCAL_DATA_FILE_NAME = 'local.dat'
-LOCAL_DATA = {}
+g_local = {'my_nick': 'Server',
+           'port': 9999}
 
 location = 0
 port = 0
 top = ""
 
 main_body_text = 0
-#-GLOBALS-
+# -GLOBALS-
 
 # So,
-   #  x_encode your message with the key, then pass that to
-   #  refract to get a string out of it.
-   # To decrypt, pass the message back to x_encode, and then back to refract
+#  x_encode your message with the key, then pass that to
+#  refract to get a string out of it.
+# To decrypt, pass the message back to x_encode, and then back to refract
 
 def binWord(word):
     """Converts the string into binary."""
@@ -503,10 +497,12 @@ def dump_contacts():
             contact_array[contact][1] + "\n")
     filehandle.close()
 
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 
 # places the text from the text bar on to the screen and sends it to
 # everyone this program is connected to
+
+
 def placeText(text):
     """Places the text from the text bar on to the screen and sends it to
     everyone this program is connected to.
@@ -515,49 +511,27 @@ def placeText(text):
     global conn_array
     global secret_array
     global MY_USER_NAME
-    #writeToScreen(text, MY_USER_NAME)
     myWordsToScreen(text)
     for person in conn_array:
         netThrow(person, secret_array[person], text)
 
+
 def writeToScreen(text, username=""):
     """Places text to main text body in format "username: text"."""
-    global main_body_text
-    global isCLI
-    global MY_USER_NAME
-    if isCLI:
-        if username:
-            print(username + ": " + text)
-        else:
-            print(text)
+    if username:
+        print(username + ": " + text)
     else:
-        main_body_text.config(state=NORMAL)
-        main_body_text.insert(END, '\n')
-        if username:
-            main_body_text.insert(END, username + ": ")
-        main_body_text.insert(END, text)
-        main_body_text.yview(END)
-        main_body_text.config(state=DISABLED)
+        print(text)
 
 
 def myWordsToScreen(text):
     """Places my words to main text body in format " text :MY_USER_NAME"."""
-    global main_body_text
-    global isCLI
     global MY_USER_NAME
     global LINE_CHAR_LENGTH
 
-    if isCLI:
-        print(MY_USER_NAME + ": " + text)
-        return
-
     count = LINE_CHAR_LENGTH - len(text) - 2 - len(MY_USER_NAME)
-    new_text = WHITE_SPACE_LINE[0:count] + text + " :" + MY_USER_NAME
-    main_body_text.config(state=NORMAL)
-    main_body_text.insert(END, '\n')
-    main_body_text.insert(END, new_text)
-    main_body_text.yview(END)
-    main_body_text.config(state=DISABLED)
+    new_text = SPACE[0:count] + text + " :" + MY_USER_NAME
+    print(new_text)
 
 
 def processUserText(event):
@@ -591,7 +565,7 @@ def processUserInput(text):
         processUserCommands(command, params)
 
 
-#-------------------------------------------------------------------------
+# -------------------------------------------------------------------------
 
 class Server (threading.Thread):
     "A class for a Server instance."""
@@ -747,6 +721,7 @@ class Client (threading.Thread):
         # ##########################################################################THIS
         # IS GOOD, BUT I CAN'T TEST ON ONE MACHINE
 
+
 def Runner(conn, secret):
     global username_array
     while 1:
@@ -754,8 +729,9 @@ def Runner(conn, secret):
         if data != 1:
             writeToScreen(data, username_array[conn])
 
-#-------------------------------------------------------------------------
+# -------------------------------------------------------------------------
 # Menu helpers
+
 
 def QuickClient():
     """Menu window for connection options."""
@@ -773,6 +749,7 @@ def QuickClient():
 def QuickServer():
     """Quickstarts a server."""
     Server(9999).start()
+
 
 def saveHistory():
     """Saves history with Tkinter's asksaveasfilename dialog."""
@@ -816,77 +793,48 @@ def toTwo():
     clientType = 1
 
 
-#-------------------------------------------------------------------------
+# -------------------------------------------------------------------------
+
+def wait_for_input():
+    while True:
+        text = raw_input(':')
+        if text == '>':
+            wait_for_command()
+        if text == 'exit':
+            return
 
 
-if len(sys.argv) > 1 and sys.argv[1] == "-cli":
+def wait_for_command():
+    while True:
+        cmd = raw_input('>')
+        if cmd == 'exit':
+            return
+        if cmd:
+            run_command(cmd)
+
+
+def run_command(cmd):
+    if cmd == '?':
+        show_command_help()
+    elif cmd == 'port':
+        show_my_port()
+    elif cmd == 'set port':
+        set_server_listen_port()
+
+
+def show_my_port():
+    print('port:' + str(g_local['port']))
+
+
+def show_command_help():
+    print('nick: show current nickname')
+    print('set_nick: set new nickname')
+    print('port: set server listen port number')
+
+def main():
     print("Starting command line chat")
+    wait_for_input()
 
-else:
-    root = Tk()
-    root.title("Chat")
 
-    menubar = Menu(root)
-
-    file_menu = Menu(menubar, tearoff=0)
-    file_menu.add_command(label="Save chat", command=lambda: saveHistory())
-    file_menu.add_command(label="Change username",
-                          command=lambda: username_options_window(root))
-    file_menu.add_command(label="Exit", command=lambda: root.destroy())
-    menubar.add_cascade(label="File", menu=file_menu)
-
-    connection_menu = Menu(menubar, tearoff=0)
-    connection_menu.add_command(label="Quick Connect", command=QuickClient)
-    connection_menu.add_command(
-        label="Connect on port", command=lambda: client_options_window(root))
-    connection_menu.add_command(
-        label="Disconnect", command=lambda: processFlag("-001"))
-    menubar.add_cascade(label="Connect", menu=connection_menu)
-
-    server_menu = Menu(menubar, tearoff=0)
-    server_menu.add_command(label="Launch server", command=QuickServer)
-    server_menu.add_command(label="Listen on port",
-                            command=lambda: server_options_window(root))
-    menubar.add_cascade(label="Server", menu=server_menu)
-
-    menubar.add_command(label="Contacts", command=lambda:
-                        contacts_window(root))
-
-    root.config(menu=menubar)
-
-    main_body = Frame(root, height=20, width=50)
-
-    main_body_text = Text(main_body)
-    body_text_scroll = Scrollbar(main_body)
-    main_body_text.focus_set()
-    body_text_scroll.pack(side=RIGHT, fill=Y)
-    main_body_text.pack(side=LEFT, fill=Y)
-    body_text_scroll.config(command=main_body_text.yview)
-    main_body_text.config(yscrollcommand=body_text_scroll.set)
-    main_body.pack()
-
-    main_body_text.insert(END, "Welcome to the chat program!")
-    main_body_text.config(state=DISABLED)
-
-    text_input = Entry(root, width=60)
-    text_input.bind("<Return>", processUserText)
-    text_input.pack()
-
-    statusConnect = StringVar()
-    statusConnect.set("Connect")
-    clientType = 1
-    Radiobutton(root, text="Client", variable=clientType,
-                value=0, command=toOne).pack(anchor=E)
-    Radiobutton(root, text="Server", variable=clientType,
-                value=1, command=toTwo).pack(anchor=E)
-    connecter = Button(root, textvariable=statusConnect,
-                       command=lambda: connects(clientType))
-    connecter.pack()
-
-    load_contacts()
-
-#------------------------------------------------------------#
-
-    root.mainloop()
-
-    dump_contacts()
+if __name__ == '__main__':
+    main()
