@@ -907,7 +907,7 @@ def start_server():
 
 
 def show_local():
-    print(g_localcli)
+    print(g_local)
 
 
 def try_set_my_port():
