@@ -3,7 +3,8 @@ import threading
 import time
 from nanomsg import Socket, PAIR
 
-LINE_CHAR_LENGTH = 60
+LINE_CHAR_LENGTH = 80
+SPACE = '                                                            '
 LOCAL_DATA_FILE_NAME = 'local.dat'
 g_local = {'name': 'nobody', 'port' : 5555}
 g_target = None
@@ -92,10 +93,7 @@ def start_server():
         address = 'tcp://127.0.0.1:%d' % g_local['port']
         print(address)
         server.bind(address)
-        #wait_for_chat_input(server)
-        while True:
-            time.sleep(1)
-            print(server.recv())
+        wait_for_chat_input(server)
 
 
 
@@ -126,8 +124,8 @@ def my_word_to_screen(text):
 
 
 def wait_for_chat_input(connection):
-    #receive = Receiver(connection)
-    #receive.start()
+    receive = Receiver(connection)
+    receive.start()
     while True:
         text = raw_input(':')
         if text == 'exit':
@@ -140,13 +138,8 @@ def wait_for_chat_input(connection):
 
 
 def send_text(connection, text):
-    if connection:
-        connection.send(text)
-    else:
-        print('Sorry, send fails: no connection.')
-        return False
+    connection.send(text)
     my_word_to_screen(text)
-    return True
 
 
 
@@ -161,11 +154,11 @@ class Receiver(threading.Thread):
 
     def run(self):
         while True:
-            time.sleep(1)
+            time.sleep(0.5)
             self.receive()
 
     def receive(self):
-        print('start receive...')
+        #print('start receive...')
         text = self.connection.recv()
         print(self.name + ': ' + text)
 
