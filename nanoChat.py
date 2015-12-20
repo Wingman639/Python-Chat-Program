@@ -3,7 +3,8 @@ import threading
 import time
 from nanomsg import Socket, PAIR
 
-LINE_CHAR_LENGTH = 80
+STOP_COMMAND = '[connection]:stop'
+LINE_CHAR_LENGTH = 60
 SPACE = '                                                            '
 LOCAL_DATA_FILE_NAME = 'local.dat'
 g_local = {'name': 'nobody', 'port' : 5555}
@@ -115,8 +116,8 @@ def my_word_to_screen(text):
     global g_local
     global LINE_CHAR_LENGTH
 
-    count = LINE_CHAR_LENGTH - len(text) - 2 - len(g_local['name'])
-    new_text = SPACE[0:count] + text + " :" + g_local['name']
+    count = LINE_CHAR_LENGTH - len(text) - 5 - len(g_local['name'])
+    new_text = "%s%s :[%s]" % (SPACE[0:count], text, g_local['name'])
     print(new_text)
 
 # -------------------------------------------------------------------------
@@ -127,9 +128,11 @@ def wait_for_chat_input(connection):
     receive = Receiver(connection)
     receive.start()
     while True:
-        text = raw_input(':')
+        text = raw_input('')
         if text == 'exit':
-            receive.exit()
+            connection.send(STOP_COMMAND)
+            receive.stop_receive()
+            receive.stop()
             return
         else:
             send_text(connection, text)
@@ -138,7 +141,8 @@ def wait_for_chat_input(connection):
 
 
 def send_text(connection, text):
-    connection.send(text)
+    extend_text = '[%s]:%s' % (g_local['name'], text)
+    connection.send(extend_text)
     my_word_to_screen(text)
 
 
@@ -149,19 +153,21 @@ def send_text(connection, text):
 class Receiver(threading.Thread):
     def __init__(self, connection):
         threading.Thread.__init__(self)
-        self.name = 'unknown'
         self.connection = connection
+        self.stop_flag = False
 
     def run(self):
-        while True:
+        while not self.stop_flag:
             time.sleep(0.5)
             self.receive()
 
     def receive(self):
         #print('start receive...')
         text = self.connection.recv()
-        print(self.name + ': ' + text)
+        print(text)
 
+    def stop_receive(self):
+        self.stop_flag = True
 
 
 def main():
