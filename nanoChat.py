@@ -4,7 +4,7 @@ import time
 from nanomsg import Socket, PAIR
 
 LINE_CHAR_LENGTH = 60
-LOCAL_DATA_FILE_NAME = 'local.data'
+LOCAL_DATA_FILE_NAME = 'local.dat'
 g_local = {'name': 'nobody', 'port' : 5555}
 g_target = None
 
