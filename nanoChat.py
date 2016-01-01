@@ -132,7 +132,7 @@ def wait_for_chat_input(connection):
         if text == 'exit':
             connection.send(STOP_COMMAND)
             receive.stop_receive()
-            receive.stop()
+            receive.join()
             return
         else:
             send_text(connection, text)
