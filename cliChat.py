@@ -932,9 +932,14 @@ def set_my_port():
 
 
 def show_command_help():
-    print('nick: show current nickname')
-    print('set_nick: set new nickname')
+    print('show: show current nickname')
+    print('name: set new nickname')
     print('port: set server listen port number')
+    print('server: start a server')
+    print('client: start a client')
+    print('server ip: set server ip to connect for client')
+    print('server port: set server port to connect for client')
+
 
 
 def main():
