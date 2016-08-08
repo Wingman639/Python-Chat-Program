@@ -53,8 +53,10 @@ class ClientFrame(wx.Frame):
         text = 'send to [%s]: %s' % (self.buttonBox.addressInput.GetValue(), self.buttonBox.sayInput.GetValue())
         self.infoText.AppendText(text)
         parameters = self.buttonBox.addressInput.GetValue().split(':')
-        host = (parameters[0], int(parameters[1]))
-        udp.send(host, self.buttonBox.sayInput.GetValue())
+        ip = parameters[0]
+        port = int(parameters[1])
+        message = self.buttonBox.sayInput.GetValue()
+        udp.send(ip, port, message)
 
 
 
