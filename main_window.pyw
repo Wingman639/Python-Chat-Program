@@ -3,6 +3,10 @@ import wx
 import os
 import button_panel
 import udp
+import sys
+
+HOST = '127.0.0.1'
+PORT = 31500
 
 class ClientFrame(wx.Frame):
     def __init__(self):
@@ -42,23 +46,30 @@ class ClientFrame(wx.Frame):
 
     #########################
     def init_all(self):
+        global HOST, PORT
+        self.server = udp.minichat.Server(HOST, PORT, self.onReceiveData)
+        self.server.start()
         self.buttonBox.addressInput.SetValue('127.0.0.1:31500')
+
 
     #########################
     def bindEvents(self):
-        self.buttonBox.buttonSend.Bind(wx.EVT_BUTTON, self.onSendButton)
+        self.buttonBox.sendButton.Bind(wx.EVT_BUTTON, self.onSendButton)
+        self.buttonBox.sayInput.Bind(wx.EVT_TEXT_ENTER, self.onSendButton)
 
     #########################
     def onSendButton(self, event):
         text = 'send to [%s]: %s' % (self.buttonBox.addressInput.GetValue(), self.buttonBox.sayInput.GetValue())
-        self.infoText.AppendText(text)
+        self.infoText.AppendText(text + '\n')
         parameters = self.buttonBox.addressInput.GetValue().split(':')
         ip = parameters[0]
         port = int(parameters[1])
         message = self.buttonBox.sayInput.GetValue()
         udp.send(ip, port, message)
 
-
+    def onReceiveData(self, data):
+        self.mainText.AppendText(str(data) + '\n')
+        print data
 
 
 def run_window():
@@ -68,6 +79,10 @@ def run_window():
     app.MainLoop()
 
 def main():
+    if len(sys.argv) > 1:
+        global PORT
+        PORT = int(sys.argv[1])
+        print 'port: ', PORT
     run_window()
 
 if __name__ == '__main__':

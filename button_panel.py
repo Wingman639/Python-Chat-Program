@@ -20,12 +20,12 @@ class ButtonBox(wx.Panel):
         sizer.Add(self.addressInput, flag=wx.LEFT | wx.ALIGN_CENTER_VERTICAL, border=10)
 
     def addSayText(self, sizer):
-        self.sayInput = wx.TextCtrl(self, -1, "", size=(360, 30))
+        self.sayInput = wx.TextCtrl(self, -1, "", size=(360, 30), style=wx.TE_PROCESS_ENTER)
         sizer.Add(self.sayInput, flag=wx.LEFT | wx.ALIGN_CENTER_VERTICAL, border=10)
 
     def addSendButton(self, sizer):
-        self.buttonSend = wx.Button(self, -1, u"Send", size=(-1, 30))
-        sizer.Add(self.buttonSend, 0, flag=wx.LEFT | wx.ALIGN_CENTER_VERTICAL, border=10)
+        self.sendButton = wx.Button(self, -1, u"Send", size=(-1, 30))
+        sizer.Add(self.sendButton, 0, flag=wx.LEFT | wx.ALIGN_CENTER_VERTICAL, border=10)
 
     def getSayingWords(self):
         return self.sayInput.GetValue()
