@@ -2,3 +2,5 @@
 *.swp
 *.txt
 *.dat
+*.pyc
+try.py
